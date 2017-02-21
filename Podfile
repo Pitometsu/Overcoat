@@ -4,15 +4,15 @@ use_frameworks!
 inhibit_all_warnings!
 
 def shared_dependencies
-  pod 'Overcoat', :path => '.'
-  pod 'Overcoat+CoreData', :path => '.'
-  pod 'Overcoat+PromiseKit', :path => '.'
+  pod 'Overcoat_Pitometsu', :path => '.'
+  pod 'Overcoat_Pitometsu+CoreData', :path => '.'
+  pod 'Overcoat_Pitometsu+PromiseKit', :path => '.'
 
   pod 'OHHTTPStubs'
 end
 
 def extra_dependencies
-  pod 'Overcoat+ReactiveCocoa', :path => '.'  # doesn't support tvOS
+  pod 'Overcoat_Pitometsu+ReactiveCocoa', :path => '.'  # doesn't support tvOS
 end
 
 target "OvercoatTests-OSX" do
