@@ -24,10 +24,12 @@
 #import <ReactiveObjC/RACSignal.h>
 #import <ReactiveObjC/RACSubscriber.h>
 #import <ReactiveObjC/RACDisposable.h>
+#import <ReactiveObjC/RACTuple.h>
+#import <ReactiveObjC/RACSignal+Operations.h>
 
 @implementation OVCHTTPSessionManager (ReactiveCocoa)
 
-- (RACSignal *)rac_GET:(NSString *)URLString parameters:(NSDictionary *)parameters {
+- (RACSignal *)rac_GET:(NSString *)URLString parameters:(id)parameters {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self GET:URLString
                                             parameters:parameters
@@ -47,7 +49,7 @@
     }] setNameWithFormat:@"%@ -rac_GET: %@, parameters: %@", self.class, URLString, parameters];
 }
 
-- (RACSignal *)rac_HEAD:(NSString *)URLString parameters:(NSDictionary *)parameters {
+- (RACSignal *)rac_HEAD:(NSString *)URLString parameters:(id)parameters {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self HEAD:URLString
                                              parameters:parameters
@@ -66,7 +68,7 @@
     }] setNameWithFormat:@"%@ -rac_HEAD: %@, parameters: %@", self.class, URLString, parameters];
 }
 
-- (RACSignal *)rac_POST:(NSString *)URLString parameters:(NSDictionary *)parameters {
+- (RACSignal *)rac_POST:(NSString *)URLString parameters:(id)parameters {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self POST:URLString
                                              parameters:parameters
@@ -87,7 +89,7 @@
 }
 
 - (RACSignal *)rac_POST:(NSString *)URLString
-             parameters:(NSDictionary *)parameters
+             parameters:(id)parameters
 constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self POST:URLString
@@ -110,7 +112,7 @@ constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block {
             self.class, URLString, parameters];
 }
 
-- (RACSignal *)rac_PUT:(NSString *)URLString parameters:(NSDictionary *)parameters {
+- (RACSignal *)rac_PUT:(NSString *)URLString parameters:(id)parameters {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self PUT:URLString
                                             parameters:parameters
@@ -129,7 +131,7 @@ constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block {
     }] setNameWithFormat:@"%@ -rac_PUT: %@, parameters: %@", self.class, URLString, parameters];
 }
 
-- (RACSignal *)rac_PATCH:(NSString *)URLString parameters:(NSDictionary *)parameters {
+- (RACSignal *)rac_PATCH:(NSString *)URLString parameters:(id)parameters {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self PATCH:URLString
                                               parameters:parameters
@@ -148,7 +150,7 @@ constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block {
     }] setNameWithFormat:@"%@ -rac_PATCH: %@, parameters: %@", self.class, URLString, parameters];
 }
 
-- (RACSignal *)rac_DELETE:(NSString *)URLString parameters:(NSDictionary *)parameters {
+- (RACSignal *)rac_DELETE:(NSString *)URLString parameters:(id)parameters {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self DELETE:URLString
                                                parameters:parameters
@@ -170,7 +172,7 @@ constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block {
 #pragma mark -
 
 - (RACSignal *)rac_GET:(NSString *)URLString
-            parameters:(NSDictionary *)parameters
+            parameters:(id)parameters
               progress:(id<RACSubscriber>)progress {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self GET:URLString
@@ -196,9 +198,8 @@ constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block {
             self.class, URLString, parameters, progress];
 }
 
-
 - (RACSignal *)rac_POST:(NSString *)URLString
-             parameters:(NSDictionary *)parameters
+             parameters:(id)parameters
                progress:(id<RACSubscriber>)progress {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
         __block NSURLSessionDataTask *task = [self POST:URLString
@@ -225,7 +226,7 @@ constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block {
 }
 
 - (RACSignal *)rac_POST:(NSString *)URLString
-             parameters:(NSDictionary *)parameters
+             parameters:(id)parameters
 constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block
                progress:(id<RACSubscriber>)progress {
     return [[RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
@@ -251,6 +252,54 @@ constructingBodyWithBlock:(void (^)(id <AFMultipartFormData> formData))block
         }];
     }] setNameWithFormat:@"%@ -rac_POST: %@, parameters: %@, constructingBodyWithBlock %@, progress %@",
             self.class, URLString, parameters, block, progress];
+}
+
+#pragma mark -
+
+- (RACSignal *)rac_GET:(NSString *)URLString
+            parameters:(id)parameters
+                  page:(RACSignal *)page
+              progress:(id<RACSubscriber>)progress {
+
+    return [[[[page filter:^BOOL(NSNumber *page) {
+
+        return [page isKindOfClass:[NSNumber class]];
+    }] map:
+              ^RACSignal *(NSNumber *page) {
+
+                  return
+                  [RACSignal createSignal:
+                   ^RACDisposable *(id<RACSubscriber> subscriber) {
+                       __block NSURLSessionDataTask *task =
+                       [self GET:URLString
+                      parameters:parameters
+                            page:page.unsignedIntegerValue
+                        progress:
+                        ^(NSProgress *uploadProgress) {
+                            [progress sendNext:uploadProgress];
+                        }
+                      completion:
+                        ^(id response, NSError *error) { // ???: put by `page` key?
+
+                            if (!error) {
+                                [subscriber sendNext:RACTuplePack(page, response)]; // ???: - responseClassesByResourcePath
+                                [subscriber sendCompleted];
+                                [progress sendCompleted];
+                            } else {
+                                [subscriber sendError:error];
+                                [progress sendError:error];
+                            }
+                        }];
+
+                       return
+                       [RACDisposable disposableWithBlock:
+                        ^{
+                            [task cancel];
+                        }];
+                   }];
+              }] switchToLatest]
+            setNameWithFormat:@"%@ -rac_GET: %@, parameters: %@, page: %@, progress: %@",
+            self.class, URLString, parameters, page, progress];
 }
 
 @end

@@ -23,7 +23,7 @@
 #import <Overcoat/OVCHTTPSessionManager.h>
 #import <Overcoat/OVCUtilities.h>
 
-@class RACSignal;
+@class RACSignal<ValueType>;
 @protocol RACSubscriber;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -114,6 +114,26 @@ constructingBodyWithBlock:(void(^)(id<AFMultipartFormData> formData))block
  @return A cold signal which sends a `OVCResponse` on next event and completes, or error otherwise
  */
 - (RACSignal *)rac_DELETE:(NSString *)URLString parameters:(OVC_NULLABLE id)parameters;
+
+///---------------------------
+/// @name Pagination
+///---------------------------
+
+/**
+ Enqueues a `GET` request.
+
+ @param URLString The URL string used to create the request URL.
+ @param parameters The parameters to be encoded according to the client request serializer.
+ @param downloadProgress Subscribes `downloadProgress` to `next` events with `NSProgress` object,
+ to be sent on each downloading object update and completes then, send error on downloading error.
+
+ @return A cold signal which sends a `RACTuple` of `NSNumber` page number and `OVCResponse` on
+ next event and completes, or error otherwise
+ */
+- (RACSignal *)rac_GET:(NSString *)URLString
+            parameters:(OVC_NULLABLE id)parameters
+                  page:(RACSignal OVCGenerics(NSNumber *) *)page
+              progress:(OVC_NULLABLE id<RACSubscriber>)downloadProgress;
 
 @end
 

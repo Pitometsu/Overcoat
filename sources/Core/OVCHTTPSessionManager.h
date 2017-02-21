@@ -66,7 +66,46 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (OVC_NULLABLE NSDictionary OVCGenerics(NSString *, id) *)responseClassesByResourcePath;
 
+/**
+ Model classes to map in case of error response from resource.
+ 
+ @return A dictionary mapping resource paths to error model classes.
+ */
 + (OVC_NULLABLE NSDictionary OVCGenerics(NSString *, id) *)errorModelClassesByResourcePath;
+
+///---------------------------
+/// @name Pagination
+///---------------------------
+
+/**
+ Create path for paginated resource to page.
+
+ @param resourcePath Resource base path.
+ @param page Page of paginated resource.
+ @return Paginated path to resource or nil.
+ */
++ (OVC_NULLABLE NSString *)paginatedResourcePath:(NSString *)resourcePath
+                                         forPage:(NSUInteger)page;
+
+/**
+ Creates and runs an `NSURLSessionDataTask` with a `GET` request.
+
+ If the request completes successfully, the `response` parameter of the completion block contains a
+ `OVCResponse` object, and the `error` parameter is `nil`. If the request fails, the error parameter
+ contains information about the failure.
+
+ @param URLString The URL string used to create the request URL.
+ @param parameters The parameters to be encoded according to the client request serializer.
+ @param downloadProgress A block object to be executed when the download progress is updated. Note this block is called on the session queue, not the main queue.
+ @param completion A block to be executed when the request finishes.
+ */
+- (OVC_NULLABLE NSURLSessionDataTask *)GET:(NSString *)URLString
+                                parameters:(OVC_NULLABLE id)parameters
+                                      page:(NSUInteger)page
+                                  progress:(OVC_NULLABLE void(^)(NSProgress *downloadProgress))downloadProgress
+                                completion:(OVC_NULLABLE void(^)
+                                            (OVCGenericType(ResponseType, OVCResponse *) OVC__NULLABLE response,
+                                             NSError * OVC__NULLABLE error))completion;
 
 ///---------------------------
 /// @name Making HTTP Requests

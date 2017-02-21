@@ -26,6 +26,15 @@
 #import "OVCURLMatcher.h"
 #import "NSError+OVCResponse.h"
 
+@interface OVCHTTPSessionManager ()
+
+#pragma mark - Pagination
+
+@property (copy, atomic, OVC_NULLABLE) NSMutableDictionary OVCGenerics(NSString *, NSMutableDictionary OVCGenerics(NSNumber *, NSURLSessionDataTask *) *) *paginatedResourcesTasks;
+@property (copy, atomic, OVC_NULLABLE) NSMutableDictionary OVCGenerics(NSString *, NSMutableArray OVCGenerics(NSURLSessionDataTask *) *) *paginatedResourcesTasksQueues;
+
+@end
+
 @implementation OVCHTTPSessionManager
 
 #if DEBUG
@@ -71,6 +80,86 @@
 
 + (NSDictionary *)errorModelClassesByResourcePath {
     return nil;
+}
+
+#pragma mark - Pagination
+
++ (NSString *)paginatedResourcePath:(NSString *)resourcePath
+                            forPage:(NSUInteger)page {
+    return resourcePath;
+}
+
+- (NSMutableDictionary OVCGenerics(NSString *, NSMutableDictionary OVCGenerics(NSNumber *, NSURLSessionDataTask *) *) *)paginatedResourcesTasks {
+
+    if (! self->_paginatedResourcesTasks) {
+        self->_paginatedResourcesTasks = [NSMutableDictionary new];
+    }
+    return self->_paginatedResourcesTasks;
+}
+
+- (NSMutableDictionary OVCGenerics(NSString *, NSMutableArray OVCGenerics(NSURLSessionDataTask *) *) *)paginatedResourcesTasksQueues {
+
+    if (! self->_paginatedResourcesTasksQueues) {
+        self->_paginatedResourcesTasksQueues = [NSMutableDictionary new];
+    }
+    return self->_paginatedResourcesTasksQueues;
+}
+
+- (NSURLSessionDataTask *)GET:(NSString *)URLString
+                   parameters:(id)parameters
+                         page:(NSUInteger)page
+                     progress:(void (^)(NSProgress *downloadProgress))downloadProgress
+                   completion:(void (^)(OVCResponse *, NSError *))completion {
+
+    __block NSURLSessionDataTask *task = self.paginatedResourcesTasks[URLString][@(page)];
+
+    if (! task) {
+        task = [self _dataTaskWithHTTPMethod:@"GET"
+                                   URLString:[[self class] paginatedResourcePath:URLString
+                                                                         forPage:page]
+                                  parameters:parameters
+                              uploadProgress:nil
+                            downloadProgress:downloadProgress
+                                  completion:
+                ^(OVCResponse * _Nullable response, NSError * _Nullable error) {
+
+                    if (completion) {
+                        completion(response, error);
+                    }
+                    [self.paginatedResourcesTasksQueues[URLString] removeObject:task];
+                    [self.paginatedResourcesTasks[URLString] removeObjectForKey:@(page)];
+
+                    self.paginatedResourcesTasksQueues[URLString].lastObject.priority = NSURLSessionTaskPriorityHigh;
+
+                    if (self.paginatedResourcesTasksQueues[URLString].count == 0) {
+                        [self.paginatedResourcesTasksQueues removeObjectForKey:URLString];
+                    }
+                    if (self.paginatedResourcesTasks[URLString].allValues.count == 0) {
+                        [self.paginatedResourcesTasks removeObjectForKey:URLString];
+                    }
+                    if (self.paginatedResourcesTasksQueues.allValues.count == 0) {
+                        self.paginatedResourcesTasksQueues = nil;
+                    }
+                    if (self.paginatedResourcesTasks.allValues.count == 0) {
+                        self.paginatedResourcesTasks = nil;
+                    }
+                }];
+        if (! [self.paginatedResourcesTasks[URLString] isKindOfClass:[NSMutableDictionary class]]) {
+            self.paginatedResourcesTasks[URLString] = [NSMutableDictionary new];
+        }
+        self.paginatedResourcesTasks[URLString][@(page)] = task;
+        [task resume];
+    } else {
+        [self.paginatedResourcesTasksQueues[URLString] removeObject:task];
+    }
+    if (! [self.paginatedResourcesTasksQueues[URLString] isKindOfClass:[NSMutableArray class]]) {
+        self.paginatedResourcesTasksQueues[URLString] = [NSMutableArray new];
+    }
+    self.paginatedResourcesTasksQueues[URLString].lastObject.priority = NSURLSessionTaskPriorityLow;
+    task.priority = NSURLSessionTaskPriorityHigh;
+    [self.paginatedResourcesTasksQueues[URLString] addObject:task];
+
+    return task;
 }
 
 #pragma mark - Making requests
